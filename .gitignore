@@ -9,3 +9,9 @@ dist/
 *.log
 .freebuff/
 threads/
+
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+coverage/
