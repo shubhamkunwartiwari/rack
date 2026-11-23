@@ -3,6 +3,14 @@
   "version": "0.1.0",
   "description": "Plan LLM architectures, training pipelines, teams and evals in one linked workspace.",
   "license": "MIT",
+  "homepage": "https://github.com/shubhamkunwartiwari/rack",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shubhamkunwartiwari/rack.git"
+  },
+  "bugs": {
+    "url": "https://github.com/shubhamkunwartiwari/rack/issues"
+  },
   "type": "module",
   "keywords": [
     "llm",

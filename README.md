@@ -1,5 +1,8 @@
 # Rack
 
+[![CI](https://github.com/shubhamkunwartiwari/rack/actions/workflows/ci.yml/badge.svg)](https://github.com/shubhamkunwartiwari/rack/actions/workflows/ci.yml)
+[![MIT license](https://img.shields.io/github/license/shubhamkunwartiwari/rack)](LICENSE)
+
 Plan the run before you run it.
 
 Rack is a per-account workspace for planning a language-model training run in one place: the
