@@ -994,28 +994,25 @@ function edgePath(from: Block, to: Block): string {
   return `M${x1},${y1} C${lane},${bow} ${lane},${tail} ${x2},${y2}`
 }
 
-/** Nudge a candidate position until it no longer covers another block. */
+function overlapsAt(blocks: Block[], x: number, y: number) {
+  return blocks.some(
+    (block) =>
+      Math.abs(block.x - x) < NODE_W + 24 && Math.abs(block.y - y) < NODE_H + 24,
+  )
+}
+
+/** Nearest free slot: the point itself, then rings below, above, right, left. */
 function freeSpot(blocks: Block[], x: number, y: number) {
-  const clash = (spot: { x: number; y: number }) =>
-    blocks.some(
-      (block) =>
-        Math.abs(block.x - spot.x) < NODE_W + 24 &&
-        Math.abs(block.y - spot.y) < NODE_H + 24,
-    )
   const stepX = NODE_W + 28
   const stepY = NODE_H + 28
-  for (const spot of [
-    { x, y: y + stepY },
-    { x, y: y - stepY },
-    { x: x + stepX, y },
-    { x: x - stepX, y },
-  ]) {
-    if (!clash(spot)) return spot
+  for (let ring = 0; ring <= 8; ring += 1) {
+    const offsets = ring === 0 ? [[0, 0]] : [[0, 1], [0, -1], [1, 0], [-1, 0]]
+    for (const [dx, dy] of offsets) {
+      const spot = { x: x + dx * ring * stepX, y: y + dy * ring * stepY }
+      if (!overlapsAt(blocks, spot.x, spot.y)) return spot
+    }
   }
-  let spot = { x, y }
-  for (let step = 0; step < 30 && clash(spot); step += 1)
-    spot = { x: spot.x + stepX, y: spot.y + stepY }
-  return spot
+  return { x: x + 9 * stepX, y }
 }
 
 /** Separate blocks saved on the exact same pixel, which reads as one block. */
@@ -1023,15 +1020,12 @@ function separateOverlaps(blocks: Block[]): Block[] {
   const placed: Block[] = []
   let changed = false
   for (const block of blocks) {
-    const stacked = placed.some(
-      (item) => Math.abs(item.x - block.x) < 4 && Math.abs(item.y - block.y) < 4,
-    )
-    if (stacked) {
-      placed.push({ ...block, ...freeSpot(placed, block.x, block.y) })
-      changed = true
-    } else {
+    if (!placed.some((item) => item.x === block.x && item.y === block.y)) {
       placed.push(block)
+      continue
     }
+    changed = true
+    placed.push({ ...block, ...freeSpot(placed, block.x, block.y) })
   }
   return changed ? placed : blocks
 }
