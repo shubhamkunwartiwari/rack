@@ -1013,26 +1013,6 @@ kbd {
   color: var(--text-3);
 }
 
-.save-dot {
-  margin-left: 4px;
-  font-size: 9.5px;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-3);
-}
-
-.save-dot[data-state="saving"] {
-  color: var(--train);
-}
-
-.save-dot[data-state="offline"] {
-  color: var(--train);
-}
-
-.save-dot[data-state="error"] {
-  color: var(--risk);
-}
-
 .canvas-actions {
   display: flex;
   gap: 2px;

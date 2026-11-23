@@ -120,11 +120,14 @@ export function Canvas({
   modeRef.current = mode
 
   useEffect(() => {
-    setBlocks(project.blocks)
+    const repaired = separateOverlaps(project.blocks)
+    setBlocks(repaired)
     setEdges(project.edges)
     setSelected([])
-    history.current = [{ blocks: project.blocks, edges: project.edges }]
+    history.current = [{ blocks: repaired, edges: project.edges }]
     cursor.current = 0
+    // A stacked pair is a placement bug; separate it once and keep the fix.
+    if (repaired !== project.blocks) onGraph(repaired, project.edges)
     // Resetting the canvas is tied to opening a different project.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project.id])
@@ -199,12 +202,17 @@ export function Canvas({
           (rect?.top ?? 0) + (rect?.height ?? 400) / 2,
         )
       })()
+    const spot = freeSpot(
+      blocksRef.current,
+      Math.round(point.x - NODE_W / 2),
+      Math.round(point.y - NODE_H / 2),
+    )
     const block: Block = {
       id: uid(),
       kind,
       label: BLOCK_META[kind].label,
-      x: Math.round(point.x - NODE_W / 2),
-      y: Math.round(point.y - NODE_H / 2),
+      x: spot.x,
+      y: spot.y,
       config: defaultConfig(kind),
     }
     applyGraph({
@@ -235,10 +243,14 @@ export function Canvas({
     const originals = blocksRef.current.filter((block) => selectedRef.current.includes(block.id))
     if (!originals.length) return
     const map = new Map<string, string>()
+    const placed = [...blocksRef.current]
     const copies = originals.map((block) => {
       const id = uid()
       map.set(block.id, id)
-      return { ...block, id, label: `${block.label} copy`, x: block.x + 48, y: block.y + 48 }
+      const spot = freeSpot(placed, block.x + 48, block.y + 48)
+      const copy = { ...block, id, label: `${block.label} copy`, x: spot.x, y: spot.y }
+      placed.push(copy)
+      return copy
     })
     const copiedEdges = edgesRef.current
       .filter((edge) => map.has(edge.fromId) && map.has(edge.toId))
@@ -734,15 +746,6 @@ export function Canvas({
           </span>
           <span className="dot-sep">·</span>
           <span>{formatHours(estimate.gpuHours)}</span>
-          <span className="save-dot" data-state={saveState}>
-            {saveState === 'saved'
-              ? 'saved'
-              : saveState === 'saving'
-                ? 'saving…'
-                : saveState === 'offline'
-                  ? 'offline'
-                  : 'not saved'}
-          </span>
         </div>
         <div className="canvas-actions">
           <button className="icon-btn" aria-label="Undo" title="Undo (⌘Z)" onClick={undo} disabled={cursor.current <= 0}>
@@ -976,8 +979,61 @@ function edgePath(from: Block, to: Block): string {
   const y1 = from.y + NODE_H / 2
   const x2 = to.x
   const y2 = to.y + NODE_H / 2
-  const bend = Math.max(50, Math.abs(x2 - x1) * 0.5)
-  return `M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2},${y2}`
+  // Cards in the seed layouts sit close together, so any gap at or right of the
+  // source port is a normal forward link: keep its curve inside that gap.
+  if (x2 - x1 > -8) {
+    const bend = Math.min(120, Math.max(10, (x2 - x1) * 0.6))
+    return `M${x1},${y1} C${x1 + bend},${y1} ${x2 - bend},${y2} ${x2},${y2}`
+  }
+  // A backward link loops around the right of both blocks instead of cutting a
+  // wide S back across the graph.
+  const lane = Math.max(x1, x2 + NODE_W) + 30
+  const flat = Math.abs(y2 - y1) < 32
+  const bow = flat ? Math.min(from.y, to.y) - 34 : y1
+  const tail = flat ? Math.min(from.y, to.y) - 34 : y2
+  return `M${x1},${y1} C${lane},${bow} ${lane},${tail} ${x2},${y2}`
+}
+
+/** Nudge a candidate position until it no longer covers another block. */
+function freeSpot(blocks: Block[], x: number, y: number) {
+  const clash = (spot: { x: number; y: number }) =>
+    blocks.some(
+      (block) =>
+        Math.abs(block.x - spot.x) < NODE_W + 24 &&
+        Math.abs(block.y - spot.y) < NODE_H + 24,
+    )
+  const stepX = NODE_W + 28
+  const stepY = NODE_H + 28
+  for (const spot of [
+    { x, y: y + stepY },
+    { x, y: y - stepY },
+    { x: x + stepX, y },
+    { x: x - stepX, y },
+  ]) {
+    if (!clash(spot)) return spot
+  }
+  let spot = { x, y }
+  for (let step = 0; step < 30 && clash(spot); step += 1)
+    spot = { x: spot.x + stepX, y: spot.y + stepY }
+  return spot
+}
+
+/** Separate blocks saved on the exact same pixel, which reads as one block. */
+function separateOverlaps(blocks: Block[]): Block[] {
+  const placed: Block[] = []
+  let changed = false
+  for (const block of blocks) {
+    const stacked = placed.some(
+      (item) => Math.abs(item.x - block.x) < 4 && Math.abs(item.y - block.y) < 4,
+    )
+    if (stacked) {
+      placed.push({ ...block, ...freeSpot(placed, block.x, block.y) })
+      changed = true
+    } else {
+      placed.push(block)
+    }
+  }
+  return changed ? placed : blocks
 }
 
 function Minimap({

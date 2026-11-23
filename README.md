@@ -10,7 +10,7 @@ GPU-hours and the cost that the rest of the plan is built on.
 It is a small, dependency-light web app: React + Vite on the client, a Hono Worker on the server,
 D1 for storage, and Sign in with Freebuff for accounts.
 
-![Rack's model canvas: a dense 7B graph with live parameter and memory totals, and the inspector editing the selected attention block](docs/rack-model-canvas.png)
+![Rack's model canvas: a dense 7B block chain with aligned cards, straight connections, and live parameter, memory and cost totals beside the run-settings panel](docs/rack-model-canvas.png)
 
 ## What it does
 

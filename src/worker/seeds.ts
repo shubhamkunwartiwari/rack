@@ -88,7 +88,7 @@ function evalRow(
 type Seed = Omit<ProjectInput, 'name' | 'brief' | 'stage' | 'startDate'>
 
 function dense(): Seed {
-  const embed = block('embedding', 'Token embedding', 40, 220, {
+  const embed = block('embedding', 'Token embedding', 40, 200, {
     dModel: 4096,
     vocab: 32000,
     seqLen: 4096,
@@ -106,11 +106,11 @@ function dense(): Seed {
     ffnWidth: 14336,
   })
   const norm = block('norm', 'RMSNorm', 760, 200, { dModel: 4096, layers: 32 })
-  const projection = block('projection', 'LM head', 1000, 220, {
+  const projection = block('projection', 'LM head', 1000, 200, {
     dModel: 4096,
     vocab: 32000,
   })
-  const loss = block('loss', 'Cross-entropy', 1240, 230, { dModel: 4096, seqLen: 4096 })
+  const loss = block('loss', 'Cross-entropy', 1240, 200, { dModel: 4096, seqLen: 4096 })
   const blocks = [embed, attention, ffn, norm, projection, loss]
   const stages = stagesFrom([
     ['Data curation', 0, 6, 'Data', '12B tokens filtered from 3 sources'],
@@ -151,7 +151,7 @@ function dense(): Seed {
 }
 
 function moe(): Seed {
-  const embed = block('embedding', 'Multilingual embedding', 40, 200, {
+  const embed = block('embedding', 'Multilingual embedding', 40, 180, {
     dModel: 4096,
     vocab: 128000,
     seqLen: 8192,
@@ -163,19 +163,19 @@ function moe(): Seed {
     heads: 32,
     kvHeads: 8,
   })
-  const experts = block('moe', 'Experts 8 · top-2', 520, 170, {
+  const experts = block('moe', 'Experts 8 · top-2', 520, 180, {
     dModel: 4096,
     layers: 32,
     ffnWidth: 14336,
     experts: 8,
     topK: 2,
   })
-  const norm = block('norm', 'RMSNorm', 760, 190, { dModel: 4096, layers: 32 })
-  const projection = block('projection', 'Shared LM head', 1000, 200, {
+  const norm = block('norm', 'RMSNorm', 760, 180, { dModel: 4096, layers: 32 })
+  const projection = block('projection', 'Shared LM head', 1000, 180, {
     dModel: 4096,
     vocab: 128000,
   })
-  const loss = block('loss', 'Router-aware CE', 1240, 210, { dModel: 4096, seqLen: 8192 })
+  const loss = block('loss', 'Router-aware CE', 1240, 180, { dModel: 4096, seqLen: 8192 })
   const blocks = [embed, attention, experts, norm, projection, loss]
   const stages = stagesFrom([
     ['Data curation', 0, 8, 'Data', '5.2T multilingual tokens'],
@@ -234,12 +234,12 @@ function small(): Seed {
     layers: 24,
     ffnWidth: 5632,
   })
-  const norm = block('norm', 'RMSNorm', 760, 190, { dModel: 2048, layers: 24 })
-  const projection = block('projection', 'LM head', 1000, 200, {
+  const norm = block('norm', 'RMSNorm', 760, 180, { dModel: 2048, layers: 24 })
+  const projection = block('projection', 'LM head', 1000, 180, {
     dModel: 2048,
     vocab: 32000,
   })
-  const loss = block('loss', 'Cross-entropy', 1240, 210, { dModel: 2048, seqLen: 8192 })
+  const loss = block('loss', 'Cross-entropy', 1240, 180, { dModel: 2048, seqLen: 8192 })
   const stages = stagesFrom([
     ['Data curation', 0, 3, 'Data', '300B tokens, deduplicated'],
     ['Pretrain', 3, 9, 'Infrastructure', '4×H100, 300B tokens'],

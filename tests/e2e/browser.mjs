@@ -333,7 +333,7 @@ async function main() {
           'pending save to settle',
           async () => {
             const state = await evalJs(
-              `document.querySelector('.save-dot')?.dataset.state ?? 'saved'`,
+              `document.querySelector('.save-indicator')?.dataset.state ?? 'saved'`,
             )
             return state !== 'saving'
           },
@@ -805,7 +805,7 @@ async function main() {
     )
 
     await waitFor('previous edits settle to saved', async () => {
-      const state = await evalJs(`document.querySelector('.save-dot')?.dataset.state`)
+      const state = await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)
       return state === 'saved'
     }, 10_000)
 
@@ -820,7 +820,7 @@ async function main() {
       'custom block added',
       async () => (await countOf('.canvas-view .node')) === nodesBeforeCustom + 1,
     )
-    const savingState = await evalJs(`document.querySelector('.save-dot')?.dataset.state`)
+    const savingState = await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)
 
     await waitFor('graph autosave request', async () => graphRequests.length > requestsBefore, 6000)
     const saveDelay = graphRequests[graphRequests.length - 1].at - clickAt
@@ -831,7 +831,7 @@ async function main() {
     )
 
     await waitFor('save completes', async () => {
-      const state = await evalJs(`document.querySelector('.save-dot')?.dataset.state`)
+      const state = await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)
       return state === 'saved'
     }, 6000)
 
@@ -888,12 +888,12 @@ async function main() {
     const offlineState = await waitFor(
       'offline indicator',
       async () => {
-        const state = await evalJs(`document.querySelector('.save-dot')?.dataset.state`)
+        const state = await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)
         return state === 'offline' ? state : false
       },
       8000,
     )
-    const offlineLabel = await textOf('.save-dot')
+    const offlineLabel = await textOf('.save-indicator')
     check(
       'a failed save while offline is kept and reported as offline',
       offlineState === 'offline' && /offline/i.test(offlineLabel ?? ''),
@@ -910,7 +910,7 @@ async function main() {
     await waitFor(
       'reconnect flushes the kept draft',
       async () =>
-        (await evalJs(`document.querySelector('.save-dot')?.dataset.state`)) === 'saved',
+        (await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)) === 'saved',
       8000,
     )
     const afterReconnect = await evalJs(`(async () => {
@@ -968,7 +968,7 @@ async function main() {
 
     await waitFor(
       'recovered draft saves on its own',
-      async () => (await evalJs(`document.querySelector('.save-dot')?.dataset.state`)) === 'saved',
+      async () => (await evalJs(`document.querySelector('.save-indicator')?.dataset.state`)) === 'saved',
       10_000,
     )
     const recoveredStored = await evalJs(`(async () => {
@@ -1295,6 +1295,24 @@ async function main() {
       await click(`.palette-item.kind-${kinds[index]}`, 0, true)
       await waitFor(`block ${kinds[index]}`, async () => (await countOf('.node')) === index + 1)
     }
+    const worstOverlap = await evalJs(`(() => {
+      const rects = [...document.querySelectorAll('.node')].map((node) => node.getBoundingClientRect())
+      let worst = 0
+      for (let i = 0; i < rects.length; i += 1) {
+        for (let j = i + 1; j < rects.length; j += 1) {
+          const w = Math.min(rects[i].right, rects[j].right) - Math.max(rects[i].left, rects[j].left)
+          const h = Math.min(rects[i].bottom, rects[j].bottom) - Math.max(rects[i].top, rects[j].top)
+          if (w > 0 && h > 0) worst = Math.max(worst, Math.round(w * h))
+        }
+      }
+      return worst
+    })()`)
+    check(
+      'blocks never stack: each placement finds its own space',
+      worstOverlap === 0,
+      `${worstOverlap}px² worst overlap across 9 blocks`,
+    )
+
     const cards = await evalJs(`[...document.querySelectorAll('.node')].map((node) => ({
       code: node.querySelector('.node-code')?.textContent?.trim() ?? '',
       title: node.querySelector('.node-title')?.textContent?.trim() ?? '',
